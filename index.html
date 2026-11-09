@@ -11,7 +11,7 @@
   <title>HT 产品库</title>
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="apple-touch-icon" href="./assets/icon-192.png">
-  <link rel="stylesheet" href="./app.css?v=3">
+  <link rel="stylesheet" href="./app.css?v=4">
 </head>
 <body>
   <header class="app-header">
@@ -42,7 +42,7 @@
         </div>
         <div id="selectedProducts" class="selected-products"><span class="selection-placeholder">可跨多次查询持续勾选产品</span></div>
         <button id="exportSelection" class="primary wide" type="button" disabled>导出已选原始资料 Excel</button>
-        <p class="selection-note">导出产品资料、完整价格历史和成分拆分；操作只读取手机资料，不会修改数据库。</p>
+        <p class="selection-note"><b>客户展示保护：</b>查询结果默认隐藏厂家、价格及完整原始资料，只有主动展开后才会显示。导出操作不会修改数据库。</p>
       </section>
 
       <form id="exhibitionFilterForm" class="filter-card exhibition-filter">
@@ -263,7 +263,7 @@
   </dialog>
 
   <script src="./vendor/sql-wasm.js"></script>
-  <script src="./vendor/exceljs.min.js?v=3"></script>
-  <script type="module" src="./app.js?v=3"></script>
+  <script src="./vendor/exceljs.min.js?v=4"></script>
+  <script type="module" src="./app.js?v=4"></script>
 </body>
 </html>

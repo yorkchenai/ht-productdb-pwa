@@ -102,3 +102,12 @@ export function filterExhibitionProducts(products, filters = {}, options = {}) {
     return true;
   });
 }
+
+export function buildExhibitionPublicProduct(product = {}) {
+  const allowedKeys = [
+    "id", "image_filename", "product_category", "supplier_model", "neutral_model", "internal_code",
+    "product_name", "composition_code", "composition_original", "width_cm", "weight_gsm",
+    "moq", "moq_unit", "mcq", "mcq_unit"
+  ];
+  return Object.fromEntries(allowedKeys.map((key) => [key, product[key] ?? null]));
+}

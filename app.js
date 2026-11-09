@@ -1,7 +1,7 @@
 import { getCurrentImage, getCurrentSnapshot, hasPreviousSnapshot, requestPersistentStorage, restorePreviousSnapshot, saveSnapshot } from "./storage.js";
 import { prepareBackup } from "./importer.js";
-import { buildCompositionRows, buildQuotationRows, filterExhibitionProducts, filterQuotationRows } from "./data-utils.js?v=3";
-import { exportExhibitionWorkbook } from "./exhibition-export.js?v=3";
+import { buildCompositionRows, buildExhibitionPublicProduct, buildQuotationRows, filterExhibitionProducts, filterQuotationRows } from "./data-utils.js?v=4";
+import { exportExhibitionWorkbook } from "./exhibition-export.js?v=4";
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -310,14 +310,35 @@ function renderExhibition() {
   state.exhibitionPage = Math.min(state.exhibitionPage, pageCount);
   const products = currentExhibitionPageProducts();
   list.innerHTML = products.map((product) => {
+    const visible = buildExhibitionPublicProduct(product);
     const selected = state.exhibitionSelected.has(product.id);
+    const internalItems = [
+      ["厂家 · Manufacturer", product.manufacturer],
+      ["美元单价 · USD", priceDisplay(standardPrice(product.id, "USD"))],
+      ["人民币单价 · RMB", priceDisplay(standardPrice(product.id, "RMB"))],
+      ["浅色价 · Light", priceDisplay(standardPrice(product.id, "RMB", "light") || standardPrice(product.id, "RMB", "浅色"))],
+      ["中色价 · Medium", priceDisplay(standardPrice(product.id, "RMB", "medium") || standardPrice(product.id, "RMB", "中色"))],
+      ["深色价 · Dark", priceDisplay(standardPrice(product.id, "RMB", "dark") || standardPrice(product.id, "RMB", "深色"))],
+      ["贸易条款 · Trade Term", product.trade_term]
+    ].map(([name, value]) => detailItem(name, value)).join("");
     return `<article class="exhibition-product-card${selected ? " selected" : ""}">
-      <label class="product-selector" aria-label="选择 ${escapeHTML(productTitle(product))}"><input type="checkbox" data-select-product="${escapeHTML(product.id)}" ${selected ? "checked" : ""}><span></span></label>
-      <span class="product-image" data-image="${escapeHTML(product.image_filename || "")}">${product.image_filename ? "加载中" : "暂无"}</span>
-      <button class="exhibition-detail" type="button" data-exhibition-detail="${escapeHTML(product.id)}">
-        <span class="product-summary"><strong>${escapeHTML(productTitle(product))}</strong><span class="sub">${escapeHTML([product.manufacturer, product.product_category, product.product_name].filter(Boolean).join(" · ") || "—")}</span><span class="composition">${escapeHTML(product.composition_code || product.composition_original || "成分未填写")}</span></span>
-        <span class="exhibition-meta"><span>${escapeHTML(product.width_cm == null ? "— cm" : `${displayNumber(product.width_cm)} cm`)}</span><span>${escapeHTML(product.weight_gsm == null ? "— g/m²" : `${displayNumber(product.weight_gsm)} g/m²`)}</span><span>${escapeHTML(product.moq == null ? "MOQ —" : `MOQ ${displayNumber(product.moq)} ${product.moq_unit || ""}`.trim())}</span></span>
-      </button>
+      <label class="product-selector" aria-label="选择 ${escapeHTML(productTitle(visible))}"><input type="checkbox" data-select-product="${escapeHTML(visible.id)}" ${selected ? "checked" : ""}><span></span></label>
+      <span class="product-image" data-image="${escapeHTML(visible.image_filename || "")}">${visible.image_filename ? "加载中" : "暂无"}</span>
+      <div class="exhibition-public">
+        <div class="exhibition-category">${escapeHTML(visible.product_category || "类别未填写")}</div>
+        <div class="exhibition-models"><strong>${escapeHTML(visible.supplier_model || "型号未填写")}</strong><span>${escapeHTML(visible.neutral_model || "中性型号未填写")}</span></div>
+        <div class="exhibition-code"><small>内部编号</small><strong>${escapeHTML(visible.internal_code || "—")}</strong></div>
+        <div class="exhibition-name"><strong>${escapeHTML(visible.product_name || "品名未填写")}</strong><span>${escapeHTML(visible.composition_code || visible.composition_original || "成分未填写")}</span></div>
+        <div class="exhibition-specs">
+          <span><small>幅宽 / 克重</small><strong>${escapeHTML(visible.width_cm == null ? "— cm" : `${displayNumber(visible.width_cm)} cm`)}</strong><em>${escapeHTML(visible.weight_gsm == null ? "— g/m²" : `${displayNumber(visible.weight_gsm)} g/m²`)}</em></span>
+          <span><small>MOQ / MCQ</small><strong>${escapeHTML(visible.moq == null ? "—" : `${displayNumber(visible.moq)} ${visible.moq_unit || ""}`.trim())}</strong><em>${escapeHTML(visible.mcq == null ? "—" : `${displayNumber(visible.mcq)} ${visible.mcq_unit || ""}`.trim())}</em></span>
+        </div>
+        <details class="exhibition-internal">
+          <summary>展开内部资料（含厂家、价格）</summary>
+          <div class="exhibition-internal-grid">${internalItems || '<p class="muted">暂无内部资料</p>'}</div>
+          <button class="secondary exhibition-full-detail" type="button" data-exhibition-detail="${escapeHTML(product.id)}">查看全部原始资料</button>
+        </details>
+      </div>
     </article>`;
   }).join("");
   for (const element of $$('[data-image]', list)) loadImageInto(element, element.dataset.image);
