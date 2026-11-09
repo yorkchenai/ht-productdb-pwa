@@ -2,10 +2,10 @@ const CACHE_NAME = "ht-product-pwa-v3";
 const APP_FILES = [
   "./",
   "./index.html",
-  "./app.css",
-  "./app.js",
-  "./data-utils.js",
-  "./exhibition-export.js",
+  "./app.css?v=3",
+  "./app.js?v=3",
+  "./data-utils.js?v=3",
+  "./exhibition-export.js?v=3",
   "./storage.js",
   "./importer.js",
   "./manifest.webmanifest",
@@ -14,7 +14,7 @@ const APP_FILES = [
   "./assets/icon-512.png",
   "./vendor/sql-wasm.js",
   "./vendor/sql-wasm.wasm",
-  "./vendor/exceljs.min.js"
+  "./vendor/exceljs.min.js?v=3"
 ];
 
 self.addEventListener("install", (event) => {

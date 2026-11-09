@@ -1,7 +1,7 @@
 import { getCurrentImage, getCurrentSnapshot, hasPreviousSnapshot, requestPersistentStorage, restorePreviousSnapshot, saveSnapshot } from "./storage.js";
 import { prepareBackup } from "./importer.js";
-import { buildCompositionRows, buildQuotationRows, filterExhibitionProducts, filterQuotationRows } from "./data-utils.js";
-import { exportExhibitionWorkbook } from "./exhibition-export.js";
+import { buildCompositionRows, buildQuotationRows, filterExhibitionProducts, filterQuotationRows } from "./data-utils.js?v=3";
+import { exportExhibitionWorkbook } from "./exhibition-export.js?v=3";
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
