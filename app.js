@@ -1,15 +1,21 @@
 import { getCurrentImage, getCurrentSnapshot, hasPreviousSnapshot, requestPersistentStorage, restorePreviousSnapshot, saveSnapshot } from "./storage.js";
 import { prepareBackup } from "./importer.js";
+import { buildCompositionRows, buildQuotationRows, filterQuotationRows } from "./data-utils.js";
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
 const PAGE_SIZE = 24;
+const HISTORY_PAGE_SIZE = 20;
 
 const state = {
   snapshot: null,
   products: [],
   filtered: [],
   page: 1,
+  dictionaryRows: [],
+  quotationRows: [],
+  filteredQuotations: [],
+  quotationPage: 1,
   pendingImport: null,
   maps: {},
   objectURLs: new Set()
@@ -83,8 +89,9 @@ function buildMaps(snapshot) {
     if (!customByProduct.has(value.product_id)) customByProduct.set(value.product_id, []);
     customByProduct.get(value.product_id).push(value);
   }
+  const quotationRows = buildQuotationRows(snapshot);
   const quotesByProduct = new Map();
-  for (const quote of snapshot?.quotationItems || []) {
+  for (const quote of quotationRows) {
     if (!quote.product_id) continue;
     if (!quotesByProduct.has(quote.product_id)) quotesByProduct.set(quote.product_id, []);
     quotesByProduct.get(quote.product_id).push(quote);
@@ -92,6 +99,8 @@ function buildMaps(snapshot) {
   const fieldDefinitions = new Map((snapshot?.fieldDefinitions || []).map((field) => [field.key, field]));
   const productsById = new Map((snapshot?.products || []).map((product) => [product.id, product]));
   state.maps = { pricesByProduct, partsByProduct, customByProduct, quotesByProduct, fieldDefinitions, productsById };
+  state.dictionaryRows = buildCompositionRows(snapshot);
+  state.quotationRows = quotationRows;
 }
 
 function productTitle(product) {
@@ -233,6 +242,79 @@ function renderProducts() {
   $("#nextPage").disabled = state.page >= pageCount;
 }
 
+function renderDictionary() {
+  const keyword = $("#dictionaryKeyword").value.trim().toLowerCase();
+  const rows = state.dictionaryRows.filter((row) => !keyword || [row.code, row.english_name, row.chinese_name, row.aliases]
+    .some((value) => String(value || "").toLowerCase().includes(keyword)));
+  $("#dictionaryCount").textContent = rows.length.toLocaleString();
+  $("#dictionaryEmpty").classList.toggle("hidden", Boolean(state.snapshot));
+  if (!state.snapshot) {
+    $("#dictionaryList").replaceChildren();
+    return;
+  }
+  $("#dictionaryList").innerHTML = rows.length ? rows.map((row) => `
+    <article class="dictionary-card">
+      <strong>${escapeHTML(row.code || "—")}</strong>
+      <span><b>${escapeHTML(row.english_name || "英文名称未填写")}</b><small>${escapeHTML(row.chinese_name || "中文名称未填写")}</small></span>
+      <em>${Number(row.product_count || 0).toLocaleString()} 个产品</em>
+    </article>`).join("") : '<div class="empty-card"><h2>没有符合条件的成分</h2><p>可以尝试简写、英文或中文名称。</p></div>';
+}
+
+function quotedPriceText(price) {
+  const shade = price.shade ? `${price.shade} ` : "";
+  if (price.amount == null) return `${shade}${price.currency || ""} 价格空白`.trim();
+  return `${shade}${priceDisplay(price)}`;
+}
+
+function quotationFilters() {
+  return {
+    keyword: $("#quotationKeyword").value,
+    startDate: $("#quotationStartDate").value,
+    endDate: $("#quotationEndDate").value,
+    customer: $("#quotationCustomer").value
+  };
+}
+
+function applyQuotationFilters() {
+  state.filteredQuotations = filterQuotationRows(state.quotationRows, quotationFilters());
+  state.quotationPage = 1;
+  renderQuotationHistory();
+}
+
+function renderQuotationHistory() {
+  const list = $("#quotationList");
+  const pagination = $("#quotationPagination");
+  $("#quotationCount").textContent = state.filteredQuotations.length.toLocaleString();
+  $("#quotationEmpty").classList.toggle("hidden", Boolean(state.snapshot));
+  if (!state.snapshot) {
+    list.replaceChildren();
+    pagination.classList.add("hidden");
+    return;
+  }
+  if (!state.filteredQuotations.length) {
+    list.innerHTML = '<div class="empty-card"><h2>没有符合条件的产品报价历史</h2><p>客户名称只需输入其中一个单词即可搜索。</p></div>';
+    pagination.classList.add("hidden");
+    return;
+  }
+  const pageCount = Math.max(1, Math.ceil(state.filteredQuotations.length / HISTORY_PAGE_SIZE));
+  state.quotationPage = Math.min(state.quotationPage, pageCount);
+  const rows = state.filteredQuotations.slice((state.quotationPage - 1) * HISTORY_PAGE_SIZE, state.quotationPage * HISTORY_PAGE_SIZE);
+  list.innerHTML = rows.map((row) => {
+    const product = row.product || {};
+    const prices = row.quoted_prices.map(quotedPriceText).join("；") || "报价表未选择价格栏";
+    return `<button class="quotation-card" type="button" ${row.product_id ? `data-quotation-product="${escapeHTML(row.product_id)}"` : ""}>
+      <span class="quotation-heading"><strong>${escapeHTML(row.customer || "客户未填写")}</strong><time>${escapeHTML(displayDate(row.quoted_at))}</time></span>
+      <span class="quotation-groups">${escapeHTML(row.groups || row.quotation_no || "Groups 未填写")}</span>
+      <span class="quotation-product"><b>${escapeHTML(row.title)}</b><small>${escapeHTML([product.manufacturer, product.product_category, product.product_name, product.composition_code || product.composition_original].filter(Boolean).join(" · ") || "—")}</small></span>
+      <em>${escapeHTML(prices)}</em>
+    </button>`;
+  }).join("");
+  pagination.classList.toggle("hidden", pageCount <= 1);
+  $("#quotationPageStatus").textContent = `第 ${state.quotationPage} / ${pageCount} 页`;
+  $("#quotationPreviousPage").disabled = state.quotationPage <= 1;
+  $("#quotationNextPage").disabled = state.quotationPage >= pageCount;
+}
+
 function detailItem(name, value) {
   if (blank(value)) return "";
   return `<div class="detail-item"><small>${escapeHTML(name)}</small><strong>${escapeHTML(value)}</strong></div>`;
@@ -240,11 +322,36 @@ function detailItem(name, value) {
 
 function priceRows(prices) {
   if (!prices.length) return '<p class="muted">暂无记录</p>';
-  return prices.map((price) => `
+  const rows = prices.map((price) => `
     <div class="history-row">
       <span><small>${escapeHTML(price.price_label || price.shade || price.source || "价格记录")}</small>${escapeHTML(priceDisplay(price))}</span>
       <span><small>${escapeHTML(price.trade_term || "")}</small>${escapeHTML(displayDate(price.quoted_at))}</span>
-    </div>`).join("");
+    </div>`);
+  return foldedHistory(rows);
+}
+
+function foldedHistory(rows) {
+  if (!rows.length) return '<p class="muted">暂无记录</p>';
+  if (rows.length <= 3) return rows.join("");
+  return `${rows.slice(0, 3).join("")}<details class="history-more"><summary>展开其余 ${rows.length - 3} 条</summary><div class="history-more-rows">${rows.slice(3).join("")}</div></details>`;
+}
+
+function quoteRows(quotes) {
+  const rows = quotes.map((quote) => {
+    const prices = quote.quoted_prices.map(quotedPriceText).join("；") || "报价表未选择价格栏";
+    return `<div class="quotation-history-row">
+      <strong>${escapeHTML(quote.customer || "客户未填写")}</strong>
+      <span>${escapeHTML(quote.groups || quote.quotation_no || "Groups 未填写")}</span>
+      <span>${escapeHTML(prices)}</span>
+      <time>${escapeHTML(displayDate(quote.quoted_at))}</time>
+    </div>`;
+  });
+  return foldedHistory(rows);
+}
+
+function detailSection(title, items) {
+  const html = items.map(([name, value]) => detailItem(name, value)).join("");
+  return html ? `<section class="detail-section"><h3>${escapeHTML(title)}</h3><div class="detail-grid">${html}</div></section>` : "";
 }
 
 async function openProductDetail(productId) {
@@ -255,25 +362,45 @@ async function openProductDetail(productId) {
   const customValues = state.maps.customByProduct.get(productId) || [];
   const customHTML = customValues.map((value) => {
     const field = state.maps.fieldDefinitions.get(value.field_key);
-    const amount = value.value_number == null ? value.value_text : `${displayNumber(value.value_number)}${value.currency ? ` ${value.currency}` : ""}${value.unit ? ` / ${value.unit}` : ""}`;
+    const amount = value.value_number == null ? value.value_text : `${value.currency ? `${value.currency} ` : ""}${displayNumber(value.value_number)}${value.unit ? ` / ${value.unit}` : ""}`;
     return detailItem([field?.zh_name, field?.en_name].filter(Boolean).join(" · ") || value.field_key, amount);
   }).join("");
-  const standardHTML = [
+  const basicItems = [
     ["厂家 · Manufacturer", product.manufacturer], ["产品类别 · Product Category", product.product_category],
     ["型号 · Supplier Model", product.supplier_model], ["中性型号 · Art. NO.", product.neutral_model],
-    ["品名 · Product Name", product.product_name], ["内部编号 · Internal Code", product.internal_code],
-    ["成分 · Composition", product.composition_code || product.composition_original],
+    ["品名 · Product Name", product.product_name], ["内部编号 · Internal Code", product.internal_code]
+  ];
+  const compositionItems = [
+    ["成分 · Composition", product.composition_code], ["成分原文 · Composition Original", product.composition_original],
     ["幅宽 · Width", product.width_cm == null ? null : `${displayNumber(product.width_cm)} cm`],
+    ["花宽 · Pattern Width", product.pattern_width_cm == null ? null : `${displayNumber(product.pattern_width_cm)} cm`],
+    ["花高 · Pattern Height", product.pattern_height_cm == null ? null : `${displayNumber(product.pattern_height_cm)} cm`],
+    ["宽度 · Width", product.width_mm == null ? null : `${displayNumber(product.width_mm)} mm`],
     ["克重 · Weight", product.weight_gsm == null ? null : `${displayNumber(product.weight_gsm)} g/m²`],
     ["码重 · Weight", product.weight_gy == null ? null : `${displayNumber(product.weight_gy)} g/y`],
-    ["出率 · Yield", product.yield_m_per_kg == null ? null : `${displayNumber(product.yield_m_per_kg, 2)} m/kg`],
+    ["尺寸 · Size", product.size]
+  ];
+  const businessItems = [
     ["MOQ", product.moq == null ? null : `${displayNumber(product.moq)} ${product.moq_unit || ""}`.trim()],
     ["MCQ", product.mcq == null ? null : `${displayNumber(product.mcq)} ${product.mcq_unit || ""}`.trim()],
-    ["贸易条款 · Trade Term", product.trade_term], ["机种类别 · Machine Type", product.machine_type],
+    ["出率 · Yield", product.yield_m_per_kg == null ? null : `${displayNumber(product.yield_m_per_kg, 2)} m/kg`],
+    ["贸易条款 · Trade Term", product.trade_term]
+  ];
+  const processItems = [
+    ["机种类别 · Machine Type", product.machine_type],
     ["编织类型 · Knit Type", product.knit_type], ["应用 · Application", product.application],
     ["服装类型 · Garment", product.garment], ["工艺 · Technology", product.technology],
     ["用途 · Purpose", product.purpose], ["备注 · Remark", product.remark]
-  ].map(([name, value]) => detailItem(name, value)).join("");
+  ];
+  const supplementaryItems = [
+    ["幅宽原文 · Width Original", product.width_original], ["克重原文 · Weight Original", product.weight_original],
+    ["数据状态 · Data Status", product.data_status], ["重复组 · Duplicate Group", product.duplicate_group],
+    ["待确认事项 · Review Notes", product.review_notes], ["未映射字段 · Unmapped Fields", product.unmapped_fields],
+    ["录入时间 · Created", product.created_at ? displayDate(product.created_at) : null],
+    ["更新时间 · Updated", product.updated_at ? displayDate(product.updated_at) : null]
+  ];
+  const parts = state.maps.partsByProduct.get(productId) || [];
+  const compositionSplitHTML = parts.length ? `<section class="detail-section"><h3>成分拆分</h3><div class="composition-parts">${parts.map((part) => `<span><b>${escapeHTML(part.code || "—")}</b>${escapeHTML(displayNumber(part.percentage, 2))}%</span>`).join("")}</div></section>` : "";
 
   const latestPrices = [
     ["美元单价", standardPrice(productId, "USD")], ["人民币单价", standardPrice(productId, "RMB")],
@@ -289,10 +416,15 @@ async function openProductDetail(productId) {
       <div class="detail-photo product-image" id="detailImage">${product.image_filename ? "加载中" : "暂无图片"}</div>
     </section>
     <section class="detail-section"><h3>当前价格</h3><div class="detail-grid">${latestPrices || '<p class="muted">暂无价格</p>'}</div></section>
-    <section class="detail-section"><h3>产品资料</h3><div class="detail-grid">${standardHTML || '<p class="muted">暂无资料</p>'}</div></section>
+    ${detailSection("基础信息", basicItems)}
+    ${compositionSplitHTML}
+    ${detailSection("规格", compositionItems)}
+    ${detailSection("商务条件", businessItems)}
+    ${detailSection("工艺与用途", processItems)}
     ${customHTML ? `<section class="detail-section"><h3>自定义栏目</h3><div class="detail-grid">${customHTML}</div></section>` : ""}
-    <section class="detail-section"><h3>全部价格变动历史 · ${prices.length}</h3><div class="history-list">${priceRows(prices.slice(0, 20))}</div></section>
-    <section class="detail-section"><h3>客户报价记录 · ${quotes.length}</h3><div class="history-list">${quotes.length ? quotes.slice(0, 20).map((quote) => `<div class="history-row"><span><small>客户</small>${escapeHTML(quote.customer || "—")}</span><span><small>${escapeHTML(quote.groups_name || "")}</small>${escapeHTML(displayDate(quote.quoted_at))}</span></div>`).join("") : '<p class="muted">暂无记录</p>'}</div></section>`;
+    ${detailSection("补充资料", supplementaryItems)}
+    <section class="detail-section"><h3>全部价格变动历史 · ${prices.length}</h3><div class="history-list">${priceRows(prices)}</div></section>
+    <section class="detail-section"><h3>客户报价记录 · ${quotes.length}</h3><div class="history-list">${quotes.length ? quoteRows(quotes) : '<p class="muted">暂无记录</p>'}</div></section>`;
   $("#detailDialog").showModal();
   if (product.image_filename) loadImageInto($("#detailImage"), product.image_filename);
 }
@@ -317,15 +449,24 @@ async function applySnapshot(snapshot) {
   state.products = snapshot?.products || [];
   buildMaps(snapshot);
   populateFilters();
+  const customers = [...new Set(state.quotationRows.map((row) => String(row.customer || "").trim()).filter(Boolean))]
+    .sort((left, right) => left.localeCompare(right, "zh-CN"));
+  populateSelect($("#quotationCustomer"), customers, "全部客户");
   state.filtered = [...state.products];
   state.page = 1;
+  state.filteredQuotations = [...state.quotationRows];
+  state.quotationPage = 1;
   renderMetadata();
   renderProducts();
+  renderDictionary();
+  renderQuotationHistory();
 }
 
 function showPage(pageId) {
   $$(".page").forEach((page) => page.classList.toggle("active", page.id === pageId));
   $$(".tab-bar button").forEach((button) => button.classList.toggle("active", button.dataset.page === pageId));
+  if (pageId === "dictionaryPage") renderDictionary();
+  if (pageId === "quotationPage") renderQuotationHistory();
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
@@ -378,6 +519,31 @@ function bindEvents() {
   $("#productList").addEventListener("click", (event) => {
     const card = event.target.closest("[data-product-id]");
     if (card) openProductDetail(card.dataset.productId);
+  });
+  $("#dictionaryKeyword").addEventListener("input", renderDictionary);
+  $("#quotationFilterForm").addEventListener("submit", (event) => {
+    event.preventDefault();
+    applyQuotationFilters();
+  });
+  $("#resetQuotationFilters").addEventListener("click", () => {
+    $("#quotationFilterForm").reset();
+    state.filteredQuotations = [...state.quotationRows];
+    state.quotationPage = 1;
+    renderQuotationHistory();
+  });
+  $("#quotationPreviousPage").addEventListener("click", () => {
+    state.quotationPage -= 1;
+    renderQuotationHistory();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  });
+  $("#quotationNextPage").addEventListener("click", () => {
+    state.quotationPage += 1;
+    renderQuotationHistory();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  });
+  $("#quotationList").addEventListener("click", (event) => {
+    const card = event.target.closest("[data-quotation-product]");
+    if (card) openProductDetail(card.dataset.quotationProduct);
   });
   $$(".tab-bar button").forEach((button) => button.addEventListener("click", () => showPage(button.dataset.page)));
   $$('[data-open-data]').forEach((button) => button.addEventListener("click", () => showPage("dataPage")));

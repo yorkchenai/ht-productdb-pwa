@@ -1,9 +1,10 @@
-const CACHE_NAME = "ht-product-pwa-v1";
+const CACHE_NAME = "ht-product-pwa-v2";
 const APP_FILES = [
   "./",
   "./index.html",
   "./app.css",
   "./app.js",
+  "./data-utils.js",
   "./storage.js",
   "./importer.js",
   "./manifest.webmanifest",

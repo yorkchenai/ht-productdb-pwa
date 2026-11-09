@@ -48,6 +48,7 @@ h2 { margin: 0; }
   background: var(--card); border: 1px solid var(--line); border-radius: 22px; box-shadow: var(--shadow);
 }
 .filter-card { padding: 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 14px 12px; }
+.single-filter { grid-template-columns: 1fr; }
 .filter-card label, .range-field { display: grid; gap: 7px; min-width: 0; }
 .filter-card label > span, .range-field > span { color: var(--blue); font-size: 13px; font-weight: 750; }
 .full { grid-column: 1 / -1; }
@@ -89,6 +90,30 @@ input:focus, select:focus { border-color: var(--blue); box-shadow: 0 0 0 3px col
 .empty-card img { width: 120px; max-height: 70px; object-fit: contain; }
 .empty-card p { color: var(--muted); }
 
+.dictionary-list, .quotation-list { display: grid; gap: 10px; margin-top: 18px; }
+.dictionary-card {
+  display: grid; grid-template-columns: minmax(54px, .45fr) 2fr auto; gap: 14px; align-items: center;
+  padding: 15px 16px; border: 1px solid var(--line); border-radius: 16px; background: var(--card); box-shadow: 0 6px 18px rgba(22, 40, 78, .05);
+}
+.dictionary-card > strong { color: var(--blue); font-size: 18px; overflow-wrap: anywhere; }
+.dictionary-card > span { display: grid; gap: 3px; min-width: 0; }
+.dictionary-card b, .dictionary-card small { overflow-wrap: anywhere; }
+.dictionary-card small { color: var(--muted); }
+.dictionary-card em { color: var(--muted); font-style: normal; white-space: nowrap; }
+
+.quotation-card {
+  display: grid; gap: 8px; width: 100%; padding: 15px 16px; text-align: left; color: var(--text);
+  border: 1px solid var(--line); border-radius: 17px; background: var(--card); box-shadow: 0 6px 18px rgba(22, 40, 78, .05);
+}
+.quotation-heading { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.quotation-heading strong { color: var(--blue); font-size: 17px; }
+.quotation-heading time { color: var(--muted); font-size: 12px; white-space: nowrap; }
+.quotation-groups { color: var(--muted); font-size: 13px; overflow-wrap: anywhere; }
+.quotation-product { display: grid; gap: 3px; }
+.quotation-product b { overflow-wrap: anywhere; }
+.quotation-product small { color: var(--muted); overflow-wrap: anywhere; }
+.quotation-card > em { color: var(--green); font-style: normal; font-weight: 750; overflow-wrap: anywhere; }
+
 .identity-card { padding: 18px; display: flex; align-items: center; gap: 16px; }
 .identity-card img { width: 120px; height: 78px; object-fit: contain; background: #fff; border-radius: 10px; }
 .identity-card div { display: grid; gap: 5px; }
@@ -111,11 +136,11 @@ dd { margin: 0; text-align: right; overflow-wrap: anywhere; }
 
 .tab-bar {
   position: fixed; z-index: 30; left: 50%; bottom: calc(10px + env(safe-area-inset-bottom)); transform: translateX(-50%);
-  display: grid; grid-template-columns: 1fr 1fr; width: min(360px, calc(100% - 32px)); padding: 5px;
+  display: grid; grid-template-columns: repeat(4, 1fr); width: min(720px, calc(100% - 24px)); padding: 5px;
   background: color-mix(in srgb, #101318 92%, transparent); border: 1px solid #343944; border-radius: 25px; box-shadow: 0 12px 36px rgba(0,0,0,.28); backdrop-filter: blur(20px);
 }
-.tab-bar button { display: grid; grid-template-columns: auto auto; justify-content: center; align-items: center; gap: 7px; min-height: 51px; border: 0; border-radius: 20px; background: transparent; color: #b9bfca; font-weight: 700; }
-.tab-bar button span { font-size: 25px; line-height: 1; }
+.tab-bar button { display: grid; grid-template-columns: auto auto; justify-content: center; align-items: center; gap: 7px; min-height: 51px; padding: 4px 7px; border: 0; border-radius: 20px; background: transparent; color: #b9bfca; font-weight: 700; }
+.tab-bar button span { font-size: 23px; line-height: 1; }
 .tab-bar button.active { color: #fff; background: #31353c; }
 
 dialog { padding: 0; color: var(--text); background: transparent; border: 0; }
@@ -138,6 +163,17 @@ dialog::backdrop { background: rgba(5, 12, 26, .64); backdrop-filter: blur(7px);
 .history-list { display: grid; gap: 8px; }
 .history-row { display: grid; grid-template-columns: 1fr auto; gap: 10px; }
 .history-row span:last-child { text-align: right; }
+.composition-parts { display: flex; flex-wrap: wrap; gap: 8px; }
+.composition-parts span { display: flex; align-items: center; gap: 7px; padding: 9px 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--card); }
+.composition-parts b { color: var(--blue); }
+.history-more { border: 1px solid var(--line); border-radius: 12px; background: var(--card-2); overflow: hidden; }
+.history-more summary { padding: 12px; color: var(--blue); font-weight: 700; cursor: pointer; }
+.history-more-rows { display: grid; gap: 8px; padding: 0 8px 8px; }
+.quotation-history-row { display: grid; grid-template-columns: 1fr auto; gap: 5px 12px; padding: 11px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; }
+.quotation-history-row strong { color: var(--blue); }
+.quotation-history-row span { overflow-wrap: anywhere; }
+.quotation-history-row span:nth-of-type(2) { grid-column: 1 / -1; color: var(--green); }
+.quotation-history-row time { grid-column: 2; grid-row: 1; color: var(--muted); font-size: 12px; white-space: nowrap; }
 .warning { padding: 12px; border-radius: 13px; background: #fff4db; color: #9c6210; }
 .message-dialog { width: min(360px, calc(100% - 32px)); }
 .message-dialog article { padding: 22px; background: var(--card); border-radius: 20px; text-align: center; }
@@ -156,6 +192,15 @@ dialog::backdrop { background: rgba(5, 12, 26, .64); backdrop-filter: blur(7px);
   .identity-card { align-items: flex-start; }
   .identity-card img { width: 88px; height: 60px; }
   .detail-grid { grid-template-columns: 1fr; }
+  .tab-bar { width: calc(100% - 12px); bottom: calc(6px + env(safe-area-inset-bottom)); }
+  .tab-bar button { grid-template-columns: 1fr; grid-template-rows: auto auto; gap: 1px; min-height: 55px; padding: 3px 2px; font-size: 10px; line-height: 1.1; }
+  .tab-bar button span { font-size: 21px; }
+  .dictionary-card { grid-template-columns: 58px 1fr; gap: 10px; }
+  .dictionary-card em { grid-column: 2; font-size: 12px; }
+  .quotation-heading { align-items: flex-start; }
+  .quotation-heading time { text-align: right; white-space: normal; }
+  .quotation-history-row { grid-template-columns: 1fr; }
+  .quotation-history-row time { grid-column: 1; grid-row: auto; }
 }
 
 @media (prefers-color-scheme: dark) {

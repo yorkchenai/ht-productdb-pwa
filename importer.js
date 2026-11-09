@@ -127,7 +127,7 @@ export async function prepareBackup(file, onProgress = () => {}) {
       ? queryRows(database, `
           SELECT qi.id, qi.quotation_id, qi.product_id, qi.position, qi.snapshot_json,
                  ${quotationColumns.has("groups_name") ? "q.groups_name" : "NULL AS groups_name"},
-                 q.customer, q.quoted_at, q.file_name
+                 q.quotation_no, q.customer, q.quoted_at, q.columns_json, q.file_name, q.created_at
           FROM quotation_items qi JOIN quotations q ON q.id=qi.quotation_id
           ORDER BY q.quoted_at DESC, q.created_at DESC, qi.position`)
       : [];

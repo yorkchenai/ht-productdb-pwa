@@ -89,6 +89,63 @@
       </div>
     </section>
 
+    <section id="dictionaryPage" class="page" aria-labelledby="dictionaryTitle">
+      <div class="page-title-row">
+        <div>
+          <p class="eyebrow">COMPOSITION DICTIONARY</p>
+          <h1 id="dictionaryTitle">成分字典</h1>
+        </div>
+        <span id="dictionaryCount" class="count-pill">0</span>
+      </div>
+      <div class="filter-card single-filter">
+        <label class="full">
+          <span>搜索成分</span>
+          <input id="dictionaryKeyword" type="search" placeholder="英文简写、英文全称或中文名称" autocomplete="off">
+        </label>
+      </div>
+      <div id="dictionaryEmpty" class="empty-card hidden"><h2>尚未导入资料</h2><p>导入完整资料库备份后即可查看成分字典。</p></div>
+      <div id="dictionaryList" class="dictionary-list"></div>
+    </section>
+
+    <section id="quotationPage" class="page" aria-labelledby="quotationTitle">
+      <div class="page-title-row">
+        <div>
+          <p class="eyebrow">PRODUCT QUOTATION HISTORY</p>
+          <h1 id="quotationTitle">报价历史</h1>
+        </div>
+        <span id="quotationCount" class="count-pill">0</span>
+      </div>
+      <form id="quotationFilterForm" class="filter-card">
+        <label class="full">
+          <span>关键词</span>
+          <input id="quotationKeyword" type="search" placeholder="客户、Groups、型号、品名、成分…" autocomplete="off">
+        </label>
+        <label>
+          <span>起始日期</span>
+          <input id="quotationStartDate" type="date">
+        </label>
+        <label>
+          <span>结束日期</span>
+          <input id="quotationEndDate" type="date">
+        </label>
+        <label class="full">
+          <span>客户</span>
+          <select id="quotationCustomer"><option value="">全部客户</option></select>
+        </label>
+        <div class="form-actions full">
+          <button id="resetQuotationFilters" class="secondary" type="button">重置</button>
+          <button class="primary" type="submit">搜索历史</button>
+        </div>
+      </form>
+      <div id="quotationEmpty" class="empty-card hidden"><h2>尚未导入资料</h2><p>导入完整资料库备份后即可查询产品报价历史。</p></div>
+      <div id="quotationList" class="quotation-list"></div>
+      <div id="quotationPagination" class="pagination hidden">
+        <button id="quotationPreviousPage" class="secondary" type="button">上一页</button>
+        <span id="quotationPageStatus"></span>
+        <button id="quotationNextPage" class="secondary" type="button">下一页</button>
+      </div>
+    </section>
+
     <section id="dataPage" class="page" aria-labelledby="dataTitle">
       <p class="eyebrow">OFFLINE DATA</p>
       <h1 id="dataTitle">资料版本</h1>
@@ -125,6 +182,8 @@
 
   <nav class="tab-bar" aria-label="主菜单">
     <button class="active" type="button" data-page="searchPage"><span>⌕</span>产品查询</button>
+    <button type="button" data-page="dictionaryPage"><span>成</span>成分字典</button>
+    <button type="button" data-page="quotationPage"><span>¥</span>报价历史</button>
     <button type="button" data-page="dataPage"><span>▰</span>资料版本</button>
   </nav>
 
