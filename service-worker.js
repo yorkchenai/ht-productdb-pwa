@@ -1,8 +1,8 @@
-const CACHE_NAME = "ht-product-pwa-v4";
+const CACHE_NAME = "ht-product-pwa-v5";
 const APP_FILES = [
   "./",
   "./index.html",
-  "./app.css?v=4",
+  "./app.css?v=5",
   "./app.js?v=4",
   "./data-utils.js?v=4",
   "./exhibition-export.js?v=4",

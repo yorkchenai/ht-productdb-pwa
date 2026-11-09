@@ -94,18 +94,19 @@ input:focus, select:focus { border-color: var(--blue); box-shadow: 0 0 0 3px col
 .exhibition-product-card.selected { border-color: #7ea7ff; box-shadow: 0 0 0 2px color-mix(in srgb, var(--blue) 13%, transparent); }
 .product-selector { display: grid; place-items: center; align-self: stretch; cursor: pointer; }
 .exhibition-public { display: grid; grid-template-columns: .7fr 1fr .9fr 1.25fr 1.35fr; gap: 10px; align-items: start; min-width: 0; }
-.exhibition-category { color: var(--text); font-weight: 800; overflow-wrap: anywhere; }
+.exhibition-category { color: var(--text); font-size: 16px; font-weight: 800; overflow-wrap: anywhere; }
 .exhibition-models, .exhibition-code, .exhibition-name { display: grid; gap: 3px; min-width: 0; }
-.exhibition-models strong { color: var(--blue); overflow-wrap: anywhere; }
-.exhibition-models span, .exhibition-name span { color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
-.exhibition-code small, .exhibition-specs small { color: var(--muted); font-size: 11px; }
-.exhibition-code strong, .exhibition-name strong { overflow-wrap: anywhere; }
+.exhibition-models strong { color: var(--blue); font-size: 17px; overflow-wrap: anywhere; }
+.exhibition-models span, .exhibition-name span { color: var(--muted); font-size: 14px; line-height: 1.35; overflow-wrap: anywhere; }
+.exhibition-code small, .exhibition-specs small { color: var(--muted); font-size: 12px; }
+.exhibition-code strong { font-size: 15px; overflow-wrap: anywhere; }
+.exhibition-name strong { font-size: 16px; line-height: 1.3; overflow-wrap: anywhere; }
 .exhibition-specs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .exhibition-specs > span { display: grid; gap: 2px; min-width: 0; }
-.exhibition-specs strong, .exhibition-specs em { font-size: 12px; font-style: normal; overflow-wrap: anywhere; }
+.exhibition-specs strong, .exhibition-specs em { font-size: 14px; line-height: 1.35; font-style: normal; overflow-wrap: anywhere; }
 .exhibition-specs em { color: var(--muted); }
 .exhibition-internal { grid-column: 1 / -1; margin-top: 2px; border-top: 1px dashed var(--line); }
-.exhibition-internal summary { padding: 10px 2px 2px; color: #a76500; font-size: 12px; font-weight: 750; cursor: pointer; list-style-position: inside; }
+.exhibition-internal summary { padding: 11px 2px 3px; color: #a76500; font-size: 14px; font-weight: 750; cursor: pointer; list-style-position: inside; }
 .exhibition-internal[open] summary { margin-bottom: 9px; }
 .exhibition-internal-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
 .exhibition-internal-grid .detail-item { background: var(--card-2); }
