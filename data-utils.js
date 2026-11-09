@@ -81,3 +81,24 @@ export function filterQuotationRows(rows, filters = {}) {
     return true;
   });
 }
+
+export function filterExhibitionProducts(products, filters = {}, options = {}) {
+  const terms = text(filters.keyword).toLowerCase().split(/[\s,，;；]+/).filter(Boolean);
+  const manufacturer = text(filters.manufacturer);
+  const category = text(filters.category);
+  const composition = text(filters.composition).toUpperCase();
+  const partsByProduct = options.partsByProduct || new Map();
+  const searchText = options.searchText || ((product) => Object.values(product || {}).map(text).join(" ").toLowerCase());
+
+  return (products || []).filter((product) => {
+    const haystack = searchText(product);
+    if (terms.length && !terms.every((term) => haystack.includes(term))) return false;
+    if (manufacturer && text(product.manufacturer) !== manufacturer) return false;
+    if (category && text(product.product_category) !== category) return false;
+    if (composition) {
+      const parts = partsByProduct.get(product.id) || [];
+      if (!parts.some((part) => text(part.code).toUpperCase() === composition)) return false;
+    }
+    return true;
+  });
+}

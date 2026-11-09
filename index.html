@@ -26,6 +26,61 @@
   </header>
 
   <main>
+    <section id="exhibitionPage" class="page" aria-labelledby="exhibitionTitle">
+      <div class="page-title-row">
+        <div>
+          <p class="eyebrow">EXHIBITION QUOTATION</p>
+          <h1 id="exhibitionTitle">展会报价</h1>
+        </div>
+        <span id="exhibitionCount" class="count-pill">0</span>
+      </div>
+
+      <section class="selection-card" aria-live="polite">
+        <div class="selection-heading">
+          <div><small>已选产品</small><strong><span id="selectedCount">0</span> 个</strong></div>
+          <button id="clearSelection" class="secondary compact" type="button" disabled>清空</button>
+        </div>
+        <div id="selectedProducts" class="selected-products"><span class="selection-placeholder">可跨多次查询持续勾选产品</span></div>
+        <button id="exportSelection" class="primary wide" type="button" disabled>导出已选原始资料 Excel</button>
+        <p class="selection-note">导出产品资料、完整价格历史和成分拆分；操作只读取手机资料，不会修改数据库。</p>
+      </section>
+
+      <form id="exhibitionFilterForm" class="filter-card exhibition-filter">
+        <label class="full">
+          <span>搜索产品</span>
+          <input id="exhibitionKeyword" type="search" placeholder="型号、中性型号、品名、编号、用途…" autocomplete="off">
+        </label>
+        <label>
+          <span>厂家</span>
+          <select id="exhibitionManufacturer"><option value="">全部厂家</option></select>
+        </label>
+        <label>
+          <span>产品类别</span>
+          <select id="exhibitionCategory"><option value="">全部类别</option></select>
+        </label>
+        <label class="full">
+          <span>成分</span>
+          <select id="exhibitionComposition"><option value="">全部成分</option></select>
+        </label>
+        <div class="form-actions full">
+          <button id="resetExhibitionFilters" class="secondary" type="button">重置</button>
+          <button class="primary" type="submit">搜索产品</button>
+        </div>
+      </form>
+
+      <div id="exhibitionEmpty" class="empty-card hidden"><h2>尚未导入资料</h2><p>导入完整资料库备份后即可选择展会报价产品。</p></div>
+      <div class="page-selection-actions">
+        <label><input id="selectExhibitionPage" type="checkbox"> 全选本页</label>
+        <span>勾选会保留到下一次搜索</span>
+      </div>
+      <div id="exhibitionList" class="product-list exhibition-list"></div>
+      <div id="exhibitionPagination" class="pagination hidden">
+        <button id="exhibitionPreviousPage" class="secondary" type="button">上一页</button>
+        <span id="exhibitionPageStatus"></span>
+        <button id="exhibitionNextPage" class="secondary" type="button">下一页</button>
+      </div>
+    </section>
+
     <section id="searchPage" class="page active" aria-labelledby="searchTitle">
       <div class="page-title-row">
         <div>
@@ -181,6 +236,7 @@
   </main>
 
   <nav class="tab-bar" aria-label="主菜单">
+    <button type="button" data-page="exhibitionPage"><span>展</span>展会报价</button>
     <button class="active" type="button" data-page="searchPage"><span>⌕</span>产品查询</button>
     <button type="button" data-page="dictionaryPage"><span>成</span>成分字典</button>
     <button type="button" data-page="quotationPage"><span>¥</span>报价历史</button>
@@ -207,6 +263,7 @@
   </dialog>
 
   <script src="./vendor/sql-wasm.js"></script>
+  <script src="./vendor/exceljs.min.js"></script>
   <script type="module" src="./app.js"></script>
 </body>
 </html>

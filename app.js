@@ -1,6 +1,7 @@
 import { getCurrentImage, getCurrentSnapshot, hasPreviousSnapshot, requestPersistentStorage, restorePreviousSnapshot, saveSnapshot } from "./storage.js";
 import { prepareBackup } from "./importer.js";
-import { buildCompositionRows, buildQuotationRows, filterQuotationRows } from "./data-utils.js";
+import { buildCompositionRows, buildQuotationRows, filterExhibitionProducts, filterQuotationRows } from "./data-utils.js";
+import { exportExhibitionWorkbook } from "./exhibition-export.js";
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -16,6 +17,9 @@ const state = {
   quotationRows: [],
   filteredQuotations: [],
   quotationPage: 1,
+  exhibitionFiltered: [],
+  exhibitionPage: 1,
+  exhibitionSelected: new Map(),
   pendingImport: null,
   maps: {},
   objectURLs: new Set()
@@ -143,14 +147,20 @@ function populateFilters() {
   const distinct = (key) => [...new Set(products.map((product) => String(product[key] || "").trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, "zh-CN"));
   populateSelect($("#manufacturer"), distinct("manufacturer"), "全部厂家");
   populateSelect($("#category"), distinct("product_category"), "全部类别");
+  populateSelect($("#exhibitionManufacturer"), distinct("manufacturer"), "全部厂家");
+  populateSelect($("#exhibitionCategory"), distinct("product_category"), "全部类别");
   const dictionary = new Map((state.snapshot?.compositionDictionary || []).map((item) => [String(item.code).toUpperCase(), item]));
   const codes = [...new Set((state.snapshot?.compositionParts || []).map((part) => String(part.code || "").trim()).filter(Boolean))].sort();
   const select = $("#composition");
   select.replaceChildren(new Option("选择成分", ""));
+  const exhibitionSelect = $("#exhibitionComposition");
+  exhibitionSelect.replaceChildren(new Option("全部成分", ""));
   for (const code of codes) {
     const item = dictionary.get(code.toUpperCase());
     const suffix = [item?.english_name, item?.chinese_name].filter(Boolean).join(" / ");
-    select.add(new Option(suffix ? `${code} · ${suffix}` : code, code));
+    const label = suffix ? `${code} · ${suffix}` : code;
+    select.add(new Option(label, code));
+    exhibitionSelect.add(new Option(label, code));
   }
 }
 
@@ -240,6 +250,108 @@ function renderProducts() {
   $("#pageStatus").textContent = `第 ${state.page} / ${pageCount} 页`;
   $("#previousPage").disabled = state.page <= 1;
   $("#nextPage").disabled = state.page >= pageCount;
+}
+
+function exhibitionFilters() {
+  return {
+    keyword: $("#exhibitionKeyword").value,
+    manufacturer: $("#exhibitionManufacturer").value,
+    category: $("#exhibitionCategory").value,
+    composition: $("#exhibitionComposition").value
+  };
+}
+
+function applyExhibitionFilters() {
+  state.exhibitionFiltered = filterExhibitionProducts(state.products, exhibitionFilters(), {
+    partsByProduct: state.maps.partsByProduct,
+    searchText: productKeywordText
+  });
+  state.exhibitionPage = 1;
+  renderExhibition();
+}
+
+function currentExhibitionPageProducts() {
+  return state.exhibitionFiltered.slice((state.exhibitionPage - 1) * PAGE_SIZE, state.exhibitionPage * PAGE_SIZE);
+}
+
+function renderExhibitionSelection() {
+  const products = [...state.exhibitionSelected.values()];
+  $("#selectedCount").textContent = products.length.toLocaleString();
+  $("#clearSelection").disabled = !products.length;
+  $("#exportSelection").disabled = !products.length;
+  $("#selectedProducts").innerHTML = products.length
+    ? products.map((product) => `<button type="button" class="selected-chip" data-remove-selected="${escapeHTML(product.id)}" title="移除"><span>${escapeHTML(productTitle(product))}</span><b>×</b></button>`).join("")
+    : '<span class="selection-placeholder">可跨多次查询持续勾选产品</span>';
+}
+
+function renderExhibition() {
+  clearObjectURLs();
+  const list = $("#exhibitionList");
+  const pagination = $("#exhibitionPagination");
+  $("#exhibitionCount").textContent = state.exhibitionFiltered.length.toLocaleString();
+  $("#exhibitionEmpty").classList.toggle("hidden", Boolean(state.snapshot));
+  renderExhibitionSelection();
+  if (!state.snapshot) {
+    list.replaceChildren();
+    pagination.classList.add("hidden");
+    $("#selectExhibitionPage").checked = false;
+    $("#selectExhibitionPage").disabled = true;
+    return;
+  }
+  if (!state.exhibitionFiltered.length) {
+    list.innerHTML = '<div class="empty-card"><h2>没有符合条件的产品</h2><p>可以重置条件后再搜索。</p></div>';
+    pagination.classList.add("hidden");
+    $("#selectExhibitionPage").checked = false;
+    $("#selectExhibitionPage").disabled = true;
+    return;
+  }
+
+  const pageCount = Math.max(1, Math.ceil(state.exhibitionFiltered.length / PAGE_SIZE));
+  state.exhibitionPage = Math.min(state.exhibitionPage, pageCount);
+  const products = currentExhibitionPageProducts();
+  list.innerHTML = products.map((product) => {
+    const selected = state.exhibitionSelected.has(product.id);
+    return `<article class="exhibition-product-card${selected ? " selected" : ""}">
+      <label class="product-selector" aria-label="选择 ${escapeHTML(productTitle(product))}"><input type="checkbox" data-select-product="${escapeHTML(product.id)}" ${selected ? "checked" : ""}><span></span></label>
+      <span class="product-image" data-image="${escapeHTML(product.image_filename || "")}">${product.image_filename ? "加载中" : "暂无"}</span>
+      <button class="exhibition-detail" type="button" data-exhibition-detail="${escapeHTML(product.id)}">
+        <span class="product-summary"><strong>${escapeHTML(productTitle(product))}</strong><span class="sub">${escapeHTML([product.manufacturer, product.product_category, product.product_name].filter(Boolean).join(" · ") || "—")}</span><span class="composition">${escapeHTML(product.composition_code || product.composition_original || "成分未填写")}</span></span>
+        <span class="exhibition-meta"><span>${escapeHTML(product.width_cm == null ? "— cm" : `${displayNumber(product.width_cm)} cm`)}</span><span>${escapeHTML(product.weight_gsm == null ? "— g/m²" : `${displayNumber(product.weight_gsm)} g/m²`)}</span><span>${escapeHTML(product.moq == null ? "MOQ —" : `MOQ ${displayNumber(product.moq)} ${product.moq_unit || ""}`.trim())}</span></span>
+      </button>
+    </article>`;
+  }).join("");
+  for (const element of $$('[data-image]', list)) loadImageInto(element, element.dataset.image);
+  const allSelected = products.length > 0 && products.every((product) => state.exhibitionSelected.has(product.id));
+  $("#selectExhibitionPage").disabled = false;
+  $("#selectExhibitionPage").checked = allSelected;
+  pagination.classList.toggle("hidden", pageCount <= 1);
+  $("#exhibitionPageStatus").textContent = `第 ${state.exhibitionPage} / ${pageCount} 页`;
+  $("#exhibitionPreviousPage").disabled = state.exhibitionPage <= 1;
+  $("#exhibitionNextPage").disabled = state.exhibitionPage >= pageCount;
+}
+
+function toggleExhibitionProduct(productId, selected) {
+  const product = state.maps.productsById.get(productId);
+  if (!product) return;
+  if (selected) state.exhibitionSelected.set(productId, product);
+  else state.exhibitionSelected.delete(productId);
+  renderExhibition();
+}
+
+async function exportExhibitionSelection() {
+  const button = $("#exportSelection");
+  const originalText = button.textContent;
+  button.disabled = true;
+  button.textContent = "正在生成 Excel…";
+  try {
+    const result = await exportExhibitionWorkbook({ products: [...state.exhibitionSelected.values()], snapshot: state.snapshot, getImage: getCurrentImage });
+    if (result === "downloaded") showMessage("Excel 已生成", "文件已下载到手机，可在 Safari 下载项目或“文件”App中查看。");
+  } catch (error) {
+    if (error?.name !== "AbortError") showMessage("导出失败", error.message || String(error));
+  } finally {
+    button.textContent = originalText;
+    button.disabled = state.exhibitionSelected.size === 0;
+  }
 }
 
 function renderDictionary() {
@@ -456,8 +568,12 @@ async function applySnapshot(snapshot) {
   state.page = 1;
   state.filteredQuotations = [...state.quotationRows];
   state.quotationPage = 1;
+  state.exhibitionFiltered = [...state.products];
+  state.exhibitionPage = 1;
+  state.exhibitionSelected.clear();
   renderMetadata();
   renderProducts();
+  renderExhibition();
   renderDictionary();
   renderQuotationHistory();
 }
@@ -465,6 +581,7 @@ async function applySnapshot(snapshot) {
 function showPage(pageId) {
   $$(".page").forEach((page) => page.classList.toggle("active", page.id === pageId));
   $$(".tab-bar button").forEach((button) => button.classList.toggle("active", button.dataset.page === pageId));
+  if (pageId === "exhibitionPage") renderExhibition();
   if (pageId === "dictionaryPage") renderDictionary();
   if (pageId === "quotationPage") renderQuotationHistory();
   window.scrollTo({ top: 0, behavior: "smooth" });
@@ -507,6 +624,36 @@ async function chooseBackup(file) {
 }
 
 function bindEvents() {
+  $("#exhibitionFilterForm").addEventListener("submit", (event) => { event.preventDefault(); applyExhibitionFilters(); });
+  $("#resetExhibitionFilters").addEventListener("click", () => {
+    $("#exhibitionFilterForm").reset();
+    state.exhibitionFiltered = [...state.products];
+    state.exhibitionPage = 1;
+    renderExhibition();
+  });
+  $("#exhibitionPreviousPage").addEventListener("click", () => { state.exhibitionPage -= 1; renderExhibition(); window.scrollTo({ top: 0, behavior: "smooth" }); });
+  $("#exhibitionNextPage").addEventListener("click", () => { state.exhibitionPage += 1; renderExhibition(); window.scrollTo({ top: 0, behavior: "smooth" }); });
+  $("#exhibitionList").addEventListener("change", (event) => {
+    const checkbox = event.target.closest("[data-select-product]");
+    if (checkbox) toggleExhibitionProduct(checkbox.dataset.selectProduct, checkbox.checked);
+  });
+  $("#exhibitionList").addEventListener("click", (event) => {
+    const detail = event.target.closest("[data-exhibition-detail]");
+    if (detail) openProductDetail(detail.dataset.exhibitionDetail);
+  });
+  $("#selectExhibitionPage").addEventListener("change", (event) => {
+    for (const product of currentExhibitionPageProducts()) {
+      if (event.target.checked) state.exhibitionSelected.set(product.id, product);
+      else state.exhibitionSelected.delete(product.id);
+    }
+    renderExhibition();
+  });
+  $("#selectedProducts").addEventListener("click", (event) => {
+    const chip = event.target.closest("[data-remove-selected]");
+    if (chip) toggleExhibitionProduct(chip.dataset.removeSelected, false);
+  });
+  $("#clearSelection").addEventListener("click", () => { state.exhibitionSelected.clear(); renderExhibition(); });
+  $("#exportSelection").addEventListener("click", exportExhibitionSelection);
   $("#filterForm").addEventListener("submit", (event) => { event.preventDefault(); filterProducts(); });
   $("#resetFilters").addEventListener("click", () => {
     $("#filterForm").reset();
