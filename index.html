@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="theme-color" content="#081426" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#f3f6fc" media="(prefers-color-scheme: light)">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="HT 产品库">
+  <title>HT 产品库</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="apple-touch-icon" href="./assets/icon-192.png">
+  <link rel="stylesheet" href="./app.css">
+</head>
+<body>
+  <header class="app-header">
+    <div class="brand">
+      <img src="./assets/logo.png" alt="HT Groups">
+      <div>
+        <strong>HT 产品库</strong>
+        <span id="connectionStatus">离线资料查询</span>
+      </div>
+    </div>
+    <button id="installHelpButton" class="icon-button" type="button" aria-label="安装说明">•••</button>
+  </header>
+
+  <main>
+    <section id="searchPage" class="page active" aria-labelledby="searchTitle">
+      <div class="page-title-row">
+        <div>
+          <p class="eyebrow">PRODUCT DATABASE</p>
+          <h1 id="searchTitle">产品查询</h1>
+        </div>
+        <span id="resultCount" class="count-pill">0</span>
+      </div>
+
+      <form id="filterForm" class="filter-card">
+        <label class="full">
+          <span>关键词</span>
+          <input id="keyword" type="search" placeholder="型号、中性型号、品名、编号、用途…" autocomplete="off">
+        </label>
+        <label>
+          <span>厂家</span>
+          <select id="manufacturer"><option value="">全部厂家</option></select>
+        </label>
+        <label>
+          <span>产品类别</span>
+          <select id="category"><option value="">全部类别</option></select>
+        </label>
+        <div class="range-field">
+          <span>幅宽范围 (cm)</span>
+          <div><input id="widthMin" inputmode="decimal" type="number" step="any" placeholder="最低"><i>—</i><input id="widthMax" inputmode="decimal" type="number" step="any" placeholder="最高"></div>
+        </div>
+        <div class="range-field">
+          <span>克重范围 (g/m²)</span>
+          <div><input id="weightMin" inputmode="decimal" type="number" step="any" placeholder="最低"><i>—</i><input id="weightMax" inputmode="decimal" type="number" step="any" placeholder="最高"></div>
+        </div>
+        <div class="range-field full">
+          <span>人民币价格范围</span>
+          <div><input id="priceMin" inputmode="decimal" type="number" step="any" placeholder="最低"><i>—</i><input id="priceMax" inputmode="decimal" type="number" step="any" placeholder="最高"></div>
+        </div>
+        <div class="composition-filter full">
+          <label>
+            <span>成分</span>
+            <select id="composition"><option value="">选择成分</option></select>
+          </label>
+          <label><span>最低 %</span><input id="compositionMin" inputmode="decimal" type="number" min="0" max="100" step="any" placeholder="最低"></label>
+          <label><span>最高 %</span><input id="compositionMax" inputmode="decimal" type="number" min="0" max="100" step="any" placeholder="最高"></label>
+        </div>
+        <div class="form-actions full">
+          <button id="resetFilters" class="secondary" type="button">重置</button>
+          <button class="primary" type="submit">筛选产品</button>
+        </div>
+      </form>
+
+      <div id="emptyData" class="empty-card hidden">
+        <img src="./assets/logo.png" alt="">
+        <h2>尚未导入资料</h2>
+        <p>请到“资料版本”选择 Windows 导出的完整资料库备份。</p>
+        <button class="primary" type="button" data-open-data>去导入资料</button>
+      </div>
+
+      <div id="productList" class="product-list" aria-live="polite"></div>
+      <div id="pagination" class="pagination hidden">
+        <button id="previousPage" class="secondary" type="button">上一页</button>
+        <span id="pageStatus"></span>
+        <button id="nextPage" class="secondary" type="button">下一页</button>
+      </div>
+    </section>
+
+    <section id="dataPage" class="page" aria-labelledby="dataTitle">
+      <p class="eyebrow">OFFLINE DATA</p>
+      <h1 id="dataTitle">资料版本</h1>
+
+      <div class="identity-card">
+        <img src="./assets/logo.png" alt="HT Groups">
+        <div><strong>HT 产品库</strong><span>iPhone 独立只读网页版</span><em>无需连接 Windows，离线可用</em></div>
+      </div>
+
+      <section class="data-card">
+        <h2>当前手机资料</h2>
+        <dl id="metadataList"><div><dt>状态</dt><dd>尚未导入</dd></div></dl>
+      </section>
+
+      <section class="data-card">
+        <h2>资料维护</h2>
+        <p>选择 Windows 或 Mac 完整版导出的 <code>.pdbfullbackup</code> 文件。文件只在本机解析，账号和密码不会进入手机资料。</p>
+        <input id="backupFile" type="file" accept=".pdbfullbackup,application/octet-stream" hidden>
+        <button id="chooseBackup" class="primary wide" type="button">选择资料升级文件</button>
+        <button id="restorePrevious" class="secondary wide hidden" type="button">恢复上一版资料</button>
+        <div id="importProgress" class="progress-box hidden"><span></span><p>正在验证资料…</p></div>
+      </section>
+
+      <section class="data-card install-card">
+        <h2>安装到 iPhone</h2>
+        <ol>
+          <li>用 Safari 打开本页面。</li>
+          <li>点击 Safari 的“分享”。</li>
+          <li>选择“添加到主屏幕”，并开启“作为网页 App 打开”。</li>
+        </ol>
+      </section>
+    </section>
+  </main>
+
+  <nav class="tab-bar" aria-label="主菜单">
+    <button class="active" type="button" data-page="searchPage"><span>⌕</span>产品查询</button>
+    <button type="button" data-page="dataPage"><span>▰</span>资料版本</button>
+  </nav>
+
+  <dialog id="detailDialog" class="sheet-dialog">
+    <article>
+      <header><div><p class="eyebrow">PRODUCT DETAIL</p><h2 id="detailTitle">产品详情</h2></div><button class="dialog-close" type="button" aria-label="关闭">×</button></header>
+      <div id="detailContent"></div>
+    </article>
+  </dialog>
+
+  <dialog id="importDialog" class="sheet-dialog">
+    <article>
+      <header><div><p class="eyebrow">DATA UPDATE</p><h2>资料升级预览</h2></div><button class="dialog-close" type="button" aria-label="关闭">×</button></header>
+      <div id="importPreview"></div>
+      <footer><button class="secondary dialog-close" type="button">取消</button><button id="confirmImport" class="danger" type="button">确认更新资料</button></footer>
+    </article>
+  </dialog>
+
+  <dialog id="messageDialog" class="message-dialog">
+    <article><h2 id="messageTitle">提示</h2><p id="messageText"></p><button class="primary dialog-close" type="button">知道了</button></article>
+  </dialog>
+
+  <script src="./vendor/sql-wasm.js"></script>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
